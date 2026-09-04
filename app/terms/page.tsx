@@ -1,0 +1,5 @@
+import InfoPage from '@/components/InfoPage'
+
+export default function TermsPage() {
+  return <InfoPage eyebrow="Marketplace rules" title="Terms of use" intro="By using Jojokev, buyers and sellers agree to use the marketplace honestly, provide accurate information, and follow the order and payment process shown on the site."><h2>Buyers</h2><p>Buyers are responsible for entering accurate delivery information, transferring the exact checkout amount, and confirming delivery only after receiving the order.</p><h2>Sellers</h2><p>Sellers must provide accurate product descriptions, maintain available stock, process orders promptly, and not attempt to take protected payments outside the Jojokev checkout flow.</p><h2>Escrow</h2><p>Jojokev holds buyer payments while orders are being fulfilled. Funds become available to the seller after delivery is confirmed or the applicable automatic-release period passes, subject to any open problem report.</p><h2>Problems</h2><p>We may review orders, pause a release, request evidence, refund a buyer, or release payment to a seller when resolving an order issue.</p></InfoPage>
+}

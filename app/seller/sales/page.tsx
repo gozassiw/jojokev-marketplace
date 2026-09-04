@@ -1,0 +1,26 @@
+import { redirect } from 'next/navigation'
+import { supabaseServer } from '@/lib/supabase/clients'
+import { formatNaira } from '@/lib/money'
+
+export const dynamic = 'force-dynamic'
+
+const statusTone: Record<string, string> = { paid: 'bg-blue-50 text-blue-700', shipped: 'bg-violet-50 text-violet-700', delivered: 'bg-amber-50 text-amber-700', completed: 'bg-emerald-50 text-emerald-700', cancelled: 'bg-slate-100 text-slate-600', refunded: 'bg-red-50 text-red-700', awaiting_payment: 'bg-slate-100 text-slate-500' }
+
+export default async function SellerSalesPage() {
+  const supabase = await supabaseServer()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login?next=/seller/sales')
+  const { data: seller } = await supabase.from('seller_profiles').select('id, business_name, status').eq('user_id', user.id).single()
+  if (!seller || seller.status !== 'approved') redirect('/seller/pending')
+  const { data: items } = await supabase.from('order_items').select('id, order_id, product_title, line_total_kobo, seller_net_kobo, quantity, created_at').eq('seller_id', seller.id).order('created_at', { ascending: false }).limit(200)
+  const orderIds = Array.from(new Set((items ?? []).map(i => i.order_id)))
+  const { data: orders } = orderIds.length ? await supabase.from('orders').select('id, order_number, status, created_at').in('id', orderIds) : { data: [] as any[] }
+  const orderMap = new Map((orders ?? []).map(o => [o.id, o]))
+  const rows = (items ?? []).map(item => ({ ...item, order: orderMap.get(item.order_id) }))
+  const gross = rows.reduce((n, row) => n + Number(row.line_total_kobo || 0), 0)
+  const net = rows.reduce((n, row) => n + Number(row.seller_net_kobo || 0), 0)
+  const units = rows.reduce((n, row) => n + Number(row.quantity || 0), 0)
+  const completed = rows.filter(row => row.order?.status === 'completed').reduce((n, row) => n + Number(row.seller_net_kobo || 0), 0)
+  const statusCounts = ['paid', 'shipped', 'delivered', 'completed'].map(status => ({ status, count: rows.filter(row => row.order?.status === status).length }))
+  return <div className="dashboard-shell"><div className="page-wrap py-6 sm:py-8"><div className="mb-6"><p className="section-kicker">Seller workspace</p><h1 className="text-3xl font-black tracking-tight">Sales overview</h1><p className="mt-1 text-sm text-slate-500">Understand what is selling and what is still moving through escrow.</p></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><div className="dashboard-stat"><p className="text-2xl font-black">{formatNaira(gross)}</p><p className="mt-1 text-xs font-semibold text-slate-500">Gross sales</p></div><div className="dashboard-stat"><p className="text-2xl font-black text-[#0b5d43]">{formatNaira(net)}</p><p className="mt-1 text-xs font-semibold text-slate-500">Net earnings</p></div><div className="dashboard-stat"><p className="text-2xl font-black">{units}</p><p className="mt-1 text-xs font-semibold text-slate-500">Units sold</p></div><div className="dashboard-stat"><p className="text-2xl font-black text-[#14805d]">{formatNaira(completed)}</p><p className="mt-1 text-xs font-semibold text-slate-500">Released to wallet</p></div></div><div className="mt-5 grid gap-5 lg:grid-cols-[.8fr_1.2fr]"><section className="surface p-5 sm:p-6"><p className="section-kicker">Order flow</p><h2 className="text-xl font-black">Sales by stage</h2><div className="mt-6 space-y-4">{statusCounts.map(s => { const pct = rows.length ? Math.round((s.count / rows.length) * 100) : 0; return <div key={s.status}><div className="flex justify-between text-xs font-bold"><span className="capitalize">{s.status}</span><span className="text-slate-400">{s.count}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#14805d]" style={{ width: `${pct}%` }} /></div></div> })}</div><p className="mt-6 text-xs leading-5 text-slate-500">Paid orders stay in escrow until delivery is confirmed. Completed orders are available in your wallet.</p></section><section className="surface overflow-hidden"><div className="flex items-end justify-between p-5 sm:p-6"><div><p className="section-kicker">Recent activity</p><h2 className="text-xl font-black">Recent sales</h2></div><span className="rounded-full bg-[#e5f6ee] px-3 py-1 text-xs font-bold text-[#0b5d43]">{rows.length} items</span></div>{rows.length === 0 ? <div className="px-6 pb-8 text-sm text-slate-500">No sales yet. Your first completed sale will appear here.</div> : <div className="overflow-x-auto"><table className="dashboard-table"><thead><tr><th>Product</th><th>Order</th><th>Status</th><th className="text-right">Net</th></tr></thead><tbody>{rows.slice(0, 12).map(row => <tr key={row.id}><td><p className="max-w-[180px] truncate font-bold">{row.product_title}</p><p className="text-xs text-slate-400">Qty {row.quantity}</p></td><td className="text-xs font-semibold text-slate-500">{row.order?.order_number || '—'}</td><td><span className={`status-pill ${statusTone[row.order?.status] || statusTone.awaiting_payment}`}>{(row.order?.status || 'awaiting_payment').replace('_', ' ')}</span></td><td className="text-right font-black">{formatNaira(row.seller_net_kobo)}</td></tr>)}</tbody></table></div>}</section></div></div></div>
+}

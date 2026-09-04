@@ -1,0 +1,5 @@
+import InfoPage from '@/components/InfoPage'
+
+export default function PrivacyPage() {
+  return <InfoPage eyebrow="Your information" title="Privacy policy" intro="Jojokev uses the information needed to create accounts, process orders, deliver products, protect payments, and provide support."><h2>Information we use</h2><p>This may include your name, phone number, email address, delivery details, seller business information, product information, and order or payment status.</p><h2>How it is used</h2><p>We use this information to authenticate accounts, connect buyers and sellers for fulfilment, communicate about orders, prevent abuse, resolve problems, and maintain accurate financial records.</p><h2>Payment information</h2><p>Bank-transfer payment processing is handled through the payment provider shown at checkout. Jojokev does not ask you to send a password or secret key by email.</p><h2>Questions</h2><p>For privacy questions, contact <a href="mailto:support@jojokev.com">support@jojokev.com</a>.</p></InfoPage>
+}
