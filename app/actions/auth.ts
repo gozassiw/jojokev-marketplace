@@ -67,9 +67,10 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
 
-  if (safeNext && profile?.role !== 'admin' && profile?.role !== 'seller') redirect(safeNext)
+  if (safeNext && !['admin', 'seller', 'rider'].includes(profile?.role || '')) redirect(safeNext)
   if (profile?.role === 'admin') redirect('/admin')
   if (profile?.role === 'seller') redirect('/seller')
+  if (profile?.role === 'rider') redirect('/rider')
   redirect('/')
 }
 

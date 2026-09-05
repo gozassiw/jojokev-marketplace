@@ -26,8 +26,19 @@ export async function GET(
   if (order.payment_reference) {
     try {
       const remote = await getOrderStatus(order.payment_reference)
-      const remoteStatus = String(remote?.data?.status ?? remote?.status ?? '').toLowerCase()
-      if (remoteStatus.includes('success') || remoteStatus.includes('paid')) {
+      const remoteStatus = String(
+        remote?.data?.orderSummary?.status
+        ?? remote?.data?.status
+        ?? remote?.status
+        ?? ''
+      ).toLowerCase()
+      const remoteStatusCode = String(
+        remote?.data?.orderSummary?.paymentResponseCode
+        ?? remote?.data?.statusCode
+        ?? remote?.statusCode
+        ?? ''
+      )
+      if (remoteStatus.includes('success') || remoteStatus.includes('paid') || remoteStatusCode === '00') {
         await db.rpc('settle_paid_order', { p_order_id: order.id })
         return NextResponse.json({ status: 'paid' })
       }

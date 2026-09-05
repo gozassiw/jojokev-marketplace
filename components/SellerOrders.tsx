@@ -59,29 +59,22 @@ export default function SellerOrders({ orders }: { orders: any[] }) {
           <div className="flex flex-wrap items-center gap-3">
             <Link href={`/seller/orders/${o.id}`} className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">View order details →</Link>
             {o.status === 'paid' && (
-              <>
-                <button type="button" disabled={busyId === o.id}
-                        onClick={() => act(o.id, markShipped)}
-                        className="rounded-md bg-indigo-600 text-white px-4 py-2 text-sm font-medium disabled:opacity-50">
-                  Mark shipped
-                </button>
-                <button type="button" disabled={busyId === o.id}
-                        onClick={() => act(o.id, markDelivered)}
-                        className="rounded-md bg-emerald-600 text-white px-4 py-2 text-sm font-medium disabled:opacity-50">
-                  Mark delivered
-                </button>
-              </>
+              <button type="button" disabled={busyId === o.id}
+                      onClick={() => act(o.id, markShipped)}
+                      className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-50">
+                Mark out for delivery
+              </button>
             )}
             {o.status === 'shipped' && (
               <button type="button" disabled={busyId === o.id}
                       onClick={() => act(o.id, markDelivered)}
-                      className="rounded-md bg-emerald-600 text-white px-4 py-2 text-sm font-medium disabled:opacity-50">
+                      className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-50">
                 Mark delivered
               </button>
             )}
             {o.status === 'delivered' && o.auto_release_at && (
               <p className="text-xs text-neutral-500">
-                Auto-releases {new Date(o.auto_release_at).toLocaleString('en-NG')} if the buyer does not confirm.
+                Buyer confirmation is required. Auto-release is scheduled for {new Date(o.auto_release_at).toLocaleString('en-NG')} if the buyer does not confirm.
               </p>
             )}
           </div>

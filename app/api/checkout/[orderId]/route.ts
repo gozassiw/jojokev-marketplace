@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer, supabaseAdmin } from '@/lib/supabase/clients'
-import { createPaymentOrder, payWithBankTransfer, extractVirtualAccount } from '@/lib/transactpay'
+import { createPaymentOrder, payWithBankTransfer, extractVirtualAccount, normalizeNigeriaPhone } from '@/lib/transactpay'
 
 /**
  * Issues a virtual account for an order.
@@ -21,7 +21,7 @@ export async function POST(
   const db = supabaseAdmin()
   const { data: order } = await db
     .from('orders')
-    .select('id, order_number, total_kobo, status, buyer_id, payment_reference, va_account_number, va_bank_name, va_expires_at')
+    .select('id, order_number, total_kobo, status, buyer_id, address_id, payment_reference, va_account_number, va_bank_name, va_expires_at')
     .eq('id', orderId).single()
 
   if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -43,6 +43,13 @@ export async function POST(
 
   const { data: profile } = await db
     .from('profiles').select('full_name, phone').eq('id', user.id).single()
+  const { data: address } = order.address_id
+    ? await db.from('addresses').select('full_name, phone').eq('id', order.address_id).eq('user_id', user.id).single()
+    : { data: null }
+  const customerPhone = normalizeNigeriaPhone(address?.phone || profile?.phone || '')
+  if (!/^\+234\d{10}$/.test(customerPhone)) {
+    return NextResponse.json({ error: 'Please enter a valid 11-digit Nigerian phone number in your delivery address before paying.' }, { status: 400 })
+  }
 
   // new reference each attempt — TransactPay rejects reused references
   const reference = `${order.order_number}-${Date.now().toString(36)}`
@@ -52,8 +59,8 @@ export async function POST(
       reference,
       amountKobo: order.total_kobo,
       customerEmail: user.email!,
-      customerName: profile?.full_name || 'Customer',
-      customerPhone: profile?.phone || undefined,
+      customerName: address?.full_name || profile?.full_name || 'Customer',
+      customerPhone,
     })
 
     const payRes = await payWithBankTransfer(reference)

@@ -1,6 +1,6 @@
 const STYLES: Record<string, string> = {
   awaiting_payment: 'bg-amber-100 text-amber-800',
-  paid: 'bg-blue-100 text-blue-800',
+  paid: 'bg-emerald-100 text-emerald-800',
   shipped: 'bg-indigo-100 text-indigo-800',
   delivered: 'bg-emerald-100 text-emerald-800',
   completed: 'bg-emerald-100 text-emerald-800',
@@ -10,8 +10,8 @@ const STYLES: Record<string, string> = {
 
 const LABELS: Record<string, string> = {
   awaiting_payment: 'Payment pending',
-  paid: 'Order received',
-  shipped: 'On the way',
+  paid: 'Paid · Escrow protected',
+  shipped: 'Out for delivery',
   delivered: 'Delivered',
   completed: 'Completed',
   cancelled: 'Cancelled',

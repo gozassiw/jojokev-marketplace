@@ -109,63 +109,12 @@ export async function createOrder(
   return { orderId: order.id }
 }
 
-/**
- * Seller marks an order delivered. This starts the escrow release clock —
- * see Stage 4. Only a seller with items on the order may do this.
- */
-export async function markDelivered(orderId: string) {
-  const supabase = await supabaseServer()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Please log in.' }
-
-  const { data: seller } = await supabase
-    .from('seller_profiles').select('id').eq('user_id', user.id).single()
-  if (!seller) return { error: 'Not a seller account.' }
-
-  const db = supabaseAdmin()
-
-  const { data: hasItem } = await db
-    .from('order_items').select('id').eq('order_id', orderId).eq('seller_id', seller.id).limit(1)
-  if (!hasItem?.length) return { error: 'That order is not yours.' }
-
-  const { data: order } = await db.from('orders').select('status').eq('id', orderId).single()
-  if (!order) return { error: 'Order not found.' }
-  if (!['paid', 'shipped'].includes(order.status)) {
-    return { error: 'Only a paid order can be marked delivered.' }
-  }
-
-  const { autoReleaseDays } = await getEffectiveFees()
-  const releaseAt = new Date(Date.now() + autoReleaseDays * 24 * 60 * 60 * 1000)
-
-  await db.from('orders').update({
-    status: 'delivered',
-    delivered_at: new Date().toISOString(),
-    auto_release_at: releaseAt.toISOString(),
-  }).eq('id', orderId)
-
-  return { success: 'Marked as delivered. Funds release once the buyer confirms.' }
+/** Delivery status is now controlled by an assigned, approved Jojokev rider. */
+export async function markDelivered(_orderId: string) {
+  return { error: 'Delivery is now managed by an assigned Jojokev rider.' }
 }
 
-/** Seller marks an order shipped (paid -> shipped). */
-export async function markShipped(orderId: string) {
-  const supabase = await supabaseServer()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Please log in.' }
-
-  const { data: seller } = await supabase
-    .from('seller_profiles').select('id').eq('user_id', user.id).single()
-  if (!seller) return { error: 'Not a seller account.' }
-
-  const db = supabaseAdmin()
-
-  const { data: hasItem } = await db
-    .from('order_items').select('id').eq('order_id', orderId).eq('seller_id', seller.id).limit(1)
-  if (!hasItem?.length) return { error: 'That order is not yours.' }
-
-  const { data: order } = await db.from('orders').select('status').eq('id', orderId).single()
-  if (!order) return { error: 'Order not found.' }
-  if (order.status !== 'paid') return { error: 'Only a paid order can be marked shipped.' }
-
-  await db.from('orders').update({ status: 'shipped' }).eq('id', orderId)
-  return { success: 'Marked as shipped.' }
+/** Delivery status is now controlled by an assigned, approved Jojokev rider. */
+export async function markShipped(_orderId: string) {
+  return { error: 'Delivery is now managed by an assigned Jojokev rider.' }
 }

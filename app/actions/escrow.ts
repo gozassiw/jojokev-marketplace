@@ -20,8 +20,8 @@ export async function confirmDelivery(orderId: string) {
   if (!order) return { error: 'Order not found.' }
   if (order.buyer_id !== user.id) return { error: 'That order is not yours.' }
   if (order.status === 'completed') return { error: 'Already confirmed.' }
-  if (!['paid','shipped','delivered'].includes(order.status)) {
-    return { error: 'This order cannot be confirmed yet.' }
+  if (order.status !== 'delivered') {
+    return { error: 'The seller must mark this order delivered before you can confirm receipt.' }
   }
 
   const { error } = await db.rpc('release_order_escrow', {

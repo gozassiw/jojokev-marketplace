@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { supabaseServer } from '@/lib/supabase/clients'
+import { supabaseServer, supabaseAdmin } from '@/lib/supabase/clients'
 import { formatNaira } from '@/lib/money'
 import { redirect } from 'next/navigation'
 import OrderStatusBadge from '@/components/OrderStatusBadge'
@@ -11,7 +11,10 @@ export default async function OrdersPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login?next=/orders')
 
-  const { data: orders } = await supabase
+  // Authenticate with the browser session, then hydrate the list with the
+  // service client so valid orders are not hidden by nested RLS joins.
+  const db = supabaseAdmin()
+  const { data: orders } = await db
     .from('orders')
     .select('id, order_number, total_kobo, status, created_at')
     .eq('buyer_id', user.id)
