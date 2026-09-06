@@ -64,8 +64,8 @@ export async function registerSeller(_prev: ActionState, formData: FormData): Pr
     const passportPhotoPath = await uploadSellerDocument(admin, data.user.id, formData.get('passport_photo'), 'Passport photo')
     const signaturePath = await uploadSellerDocument(admin, data.user.id, formData.get('signature_photo'), 'Signature photo')
     if (!idPhotoPath || !utilityBillPath || !passportPhotoPath || !signaturePath) return { error: 'Upload your ID, utility bill, passport photo, and signature photo.' }
-    const { data: area } = await admin.from('delivery_areas').select('id').eq('id', storeAreaId).eq('active', true).single()
-    if (!area) return { error: 'Choose an active store area from the list.' }
+    const { data: area } = await admin.from('store_areas').select('id').eq('id', storeAreaId).eq('is_active', true).single()
+    if (!area) return { error: 'Choose an active store area from the Store Areas list.' }
     const { error: sellerError } = await admin.from('seller_profiles').insert({ user_id: data.user.id, first_name: firstName, last_name: lastName, phone: String(formData.get('phone') || '').trim(), business_name: businessName, business_address: String(formData.get('business_address') || '').trim(), business_phone: String(formData.get('business_phone') || '').trim(), id_type: idType, id_photo_path: idPhotoPath, utility_bill_path: utilityBillPath, passport_photo_path: passportPhotoPath, signature_path: signaturePath, store_area_id: storeAreaId, bank_name: String(formData.get('bank_name') || '').trim(), account_number: String(formData.get('account_number') || '').trim(), account_name: String(formData.get('account_name') || '').trim(), status: 'pending' })
     if (sellerError) return { error: sellerError.code === '23505' ? 'A seller application already exists for this account.' : sellerError.message }
   } catch (uploadError: any) { return { error: uploadError?.message || 'Could not upload seller verification documents.' } }
