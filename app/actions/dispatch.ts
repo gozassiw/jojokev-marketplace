@@ -144,13 +144,19 @@ export async function riderMarkOutForDelivery(orderId: string) {
   if (ctx.assignment.status !== 'picked_up') return { error: 'Confirm pickup before going out for delivery.' }
   const db = supabaseAdmin()
   const { data: order } = await db.from('orders').select('order_number, buyer_id').eq('id', orderId).single()
-  await db.from('delivery_assignments').update({ status: 'out_for_delivery', out_for_delivery_at: new Date().toISOString() }).eq('id', ctx.assignment.id)
-  await db.from('orders').update({ status: 'shipped' }).eq('id', orderId)
-  if (order) await db.from('notifications').insert({ user_id: order.buyer_id, order_id: orderId, type: 'out_for_delivery', title: 'Your order is out for delivery', body: `Order ${order.order_number} is on the way. Never share a delivery code before your package is physically with you.` })
+  if (!order) return { error: 'Order not found.' }
+  const code = sixDigitCode()
+  const { error: codeError } = await db.from('delivery_codes').upsert({ order_id: orderId, code_hash: hashCode(code), expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), attempts: 0, used_at: null }, { onConflict: 'order_id' })
+  if (codeError) return { error: codeError.message }
+  const { error: assignmentError } = await db.from('delivery_assignments').update({ status: 'out_for_delivery', out_for_delivery_at: new Date().toISOString() }).eq('id', ctx.assignment.id)
+  if (assignmentError) return { error: assignmentError.message }
+  const { error: orderError } = await db.from('orders').update({ status: 'shipped' }).eq('id', orderId)
+  if (orderError) return { error: orderError.message }
+  await db.from('notifications').insert({ user_id: order.buyer_id, order_id: orderId, type: 'out_for_delivery', title: 'Your order is out for delivery', body: `Order ${order.order_number} is on the way. Your private delivery code is ${code}. Only share it when the package is physically with you. Jojokev staff will never ask for it by phone or chat.`, metadata: { order_number: order.order_number, expires_in_minutes: 30 } })
   revalidatePath('/rider')
   revalidatePath('/orders')
   revalidatePath('/notifications')
-  return { success: 'Buyer notified: order is out for delivery.' }
+  return { success: 'Order is out for delivery. The buyer received the private code in their notifications.' }
 }
 
 export async function riderMarkArrived(orderId: string) {
@@ -173,7 +179,7 @@ export async function riderMarkArrived(orderId: string) {
 export async function riderVerifyDeliveryCode(orderId: string, code: string) {
   const ctx = await riderContext(orderId)
   if ('error' in ctx) return { error: ctx.error }
-  if (ctx.assignment.status !== 'arrived') return { error: 'First mark that you have arrived.' }
+  if (!['out_for_delivery', 'arrived'].includes(ctx.assignment.status)) return { error: 'Mark the order out for delivery first.' }
   const clean = code.trim()
   if (!/^\d{6}$/.test(clean)) return { error: 'Enter the six-digit buyer code.' }
   const db = supabaseAdmin()
