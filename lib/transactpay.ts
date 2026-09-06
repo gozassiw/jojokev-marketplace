@@ -72,6 +72,15 @@ async function tpFetch<T>(path: string, payload: unknown, useSecret = false): Pr
   return json
 }
 
+/** Normalize common Nigerian local formats to the E.164 format required by TransactPay. */
+export function normalizeNigeriaPhone(phone?: string): string {
+  const compact = String(phone || '').trim().replace(/[\s().-]/g, '')
+  if (compact.startsWith('+234')) return compact
+  if (compact.startsWith('234')) return `+${compact}`
+  if (compact.startsWith('0')) return `+234${compact.slice(1)}`
+  return compact
+}
+
 /** Create the provider order. Amount is in NGN major units. */
 export async function createPaymentOrder(params: {
   reference: string
@@ -85,7 +94,7 @@ export async function createPaymentOrder(params: {
     customer: {
       firstname: firstName || 'Customer',
       lastname: rest.join(' ') || 'Customer',
-      mobile: params.customerPhone || '',
+      mobile: normalizeNigeriaPhone(params.customerPhone),
       country: 'NG',
       email: params.customerEmail,
     },
@@ -126,14 +135,17 @@ export async function payoutToBank(params: {
   accountName: string
   narration?: string
 }) {
-  return tpFetch<any>('/payout', {
-    reference: params.reference,
-    amount: params.amountKobo / 100,
-    currency: 'NGN',
-    bankcode: params.bankCode,
-    accountnumber: params.accountNumber,
-    accountname: params.accountName,
-    narration: params.narration || 'Jojokev seller payout',
+  return tpFetch<any>('/payout/initiate', {
+    payoutDetails: [{
+      clientReference: params.reference,
+      accountNumber: params.accountNumber,
+      bankCode: params.bankCode,
+      amount: params.amountKobo / 100,
+      description: params.narration || 'Jojokev seller payout',
+      accountName: params.accountName,
+      creditCurrency: 'NGN',
+      debitCurrency: 'NGN',
+    }],
   }, true)
 }
 
@@ -166,7 +178,7 @@ export function extractVirtualAccount(payResponse: any): {
     payResponse,
   ].filter(Boolean)
 
-  const accountKeys = ['accountNumber', 'accountnumber', 'account_number', 'recipientAccount', 'accountNo', 'account_no']
+  const accountKeys = ['accountNumber', 'accountnumber', 'account_number', 'bankAccount', 'bankaccount', 'recipientAccount', 'accountNo', 'account_no']
   const bankKeys = ['bankName', 'bankname', 'bank_name', 'bank', 'bankProviderName', 'bankProvider']
   const visited = new Set<any>()
   let found: { accountNumber?: unknown; bankName?: unknown; accountName?: unknown; expiresAt?: unknown } | null = null

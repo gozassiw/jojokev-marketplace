@@ -1,0 +1,10 @@
+alter table seller_profiles add column if not exists first_name text;
+alter table seller_profiles add column if not exists last_name text;
+alter table seller_profiles add column if not exists phone text;
+alter table seller_profiles add column if not exists id_type text;
+alter table seller_profiles add column if not exists id_photo_path text;
+alter table seller_profiles add column if not exists utility_bill_path text;
+alter table seller_profiles add column if not exists passport_photo_path text;
+alter table seller_profiles add column if not exists signature_path text;
+alter table seller_profiles add column if not exists store_area_id uuid references delivery_areas(id) on delete set null;
+insert into storage.buckets (id, name, public) values ('seller-documents', 'seller-documents', false) on conflict (id) do nothing;

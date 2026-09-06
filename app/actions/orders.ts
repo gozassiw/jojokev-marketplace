@@ -24,7 +24,8 @@ export type CreateOrderResult = { error?: string; orderId?: string }
  */
 export async function createOrder(
   cartLines: { productId: string; quantity: number }[],
-  addressId: string
+  addressId: string,
+  areaId: string
 ): Promise<CreateOrderResult> {
   const supabase = await supabaseServer()
   const { data: { user } } = await supabase.auth.getUser()
@@ -41,6 +42,9 @@ export async function createOrder(
     .from('addresses').select('id').eq('id', addressId).eq('user_id', user.id).single()
   if (!address) return { error: 'That delivery address is not valid.' }
 
+  const { data: area } = await db.from('delivery_areas').select('id, customer_fee_kobo, rider_quote_kobo').eq('id', areaId).eq('is_active', true).single()
+  if (!area) return { error: 'That delivery area is unavailable. Please choose another area.' }
+
   // ---- re-price everything from the database; ignore anything the client sent
   const { data: products, error: prodErr } = await db
     .from('products')
@@ -49,7 +53,9 @@ export async function createOrder(
 
   if (prodErr) return { error: 'Could not load your items. Please try again.' }
 
-  const { commissionPercent, deliveryFeeKobo } = await getEffectiveFees()
+  const { commissionPercent } = await getEffectiveFees()
+  const deliveryFeeKobo = Number(area.customer_fee_kobo)
+  const riderQuoteKobo = Number(area.rider_quote_kobo)
 
   const items = []
   let subtotalKobo = 0
@@ -92,6 +98,8 @@ export async function createOrder(
     subtotal_kobo: subtotalKobo,
     delivery_fee_kobo: deliveryFeeKobo,
     total_kobo: totalKobo,
+    delivery_area_id: area.id,
+    rider_quote_kobo: riderQuoteKobo,
     status: 'awaiting_payment',
   }).select('id').single()
 
