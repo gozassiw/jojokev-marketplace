@@ -111,6 +111,15 @@ export async function createPaymentOrder(params: {
   })
 }
 
+/** Retrieve the provider fee and total payable amount for a bank-transfer order. */
+export async function getOrderFee(params: { amountKobo: number; currency?: string; paymentOption?: string }) {
+  return tpFetch<any>('/payment/order/fee', {
+    amount: params.amountKobo / 100,
+    currency: params.currency || 'NGN',
+    paymentoption: params.paymentOption || 'bank-transfer',
+  }, true)
+}
+
 /** Request the bank-transfer payment option for a provider order. */
 export async function payWithBankTransfer(reference: string) {
   return tpFetch<any>('/payment/order/pay', {

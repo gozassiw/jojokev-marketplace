@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!reference) return NextResponse.json({ received: true, note: 'ignored event without order reference' })
-  const { data: order } = await db.from('orders').select('id, order_number, total_kobo, status').eq('payment_reference', String(reference)).single()
+  const { data: order } = await db.from('orders').select('id, order_number, total_kobo, payment_amount_kobo, status').eq('payment_reference', String(reference)).single()
   if (!order) return NextResponse.json({ received: true, note: 'unknown order reference' })
 
   const reason = failureReason(data, state)
@@ -103,8 +103,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, note: 'non-final payment status recorded' })
   }
 
-  if (amountPaidKobo === null || amountPaidKobo !== Number(order.total_kobo)) {
-    const mismatchReason = `Payment amount mismatch. Expected ${Number(order.total_kobo) / 100} NGN; provider reported ${amountMajor ?? 'no amount'}.`
+  const expectedPaymentKobo = Number(order.payment_amount_kobo ?? order.total_kobo)
+  if (amountPaidKobo === null || amountPaidKobo !== expectedPaymentKobo) {
+    const mismatchReason = `Payment amount mismatch. Expected ${expectedPaymentKobo / 100} NGN; provider reported ${amountMajor ?? 'no amount'}.`
     const { error } = await db.rpc('reverse_paid_order', { p_order_id: order.id, p_reason: mismatchReason })
     if (error) return NextResponse.json({ error: 'Amount-mismatch handling failed' }, { status: 500 })
     await db.from('payment_webhook_events').update({ processed: true, provider_status: 'Failed', payload: { ...event, reconciliation: mismatchReason } }).eq('event_key', eventKey)
