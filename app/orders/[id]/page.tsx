@@ -65,7 +65,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               <div>
                 <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[.2em] text-emerald-100">Customer order</p>
                 <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Order {order.order_number}</h1>
-                <p className="mt-2 text-sm text-emerald-50">Placed {formattedDate}</p>
+                <p className="mt-2 text-sm text-emerald-50">Placed {formattedDate}</p><p className="mt-2 text-sm font-bold text-[#d9f33f]">Estimated delivery: 24–48 hours</p>
               </div>
               <OrderStatusBadge status={order.status} />
             </div>
@@ -75,7 +75,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               </span>
               <p>
                 {status === 'awaiting_payment' && 'Complete payment to confirm this order.'}
-                {status === 'paid' && 'Payment received and protected in escrow.'}
+                {status === 'paid' && 'Payment received and protected in escrow. Estimated delivery is 24–48 hours.'}
                 {status === 'shipped' && 'Your payment remains protected while the order is on the way.'}
                 {status === 'delivered' && 'Your order arrived. Confirm delivery when everything is correct.'}
                 {status === 'completed' && 'Delivery confirmed. Payment has been released to the seller.'}

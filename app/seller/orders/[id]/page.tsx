@@ -53,7 +53,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
           <div>
             <p className="eyebrow">Seller order details</p>
             <h1 className="workspace-title">Order {order.order_number}</h1>
-            <p className="workspace-subtitle">Placed {new Date(order.created_at).toLocaleString('en-NG')}</p>
+            <p className="workspace-subtitle">Placed {new Date(order.created_at).toLocaleString('en-NG')}</p><p className="mt-1 text-sm font-bold text-emerald-700">Estimated delivery: 24–48 hours</p>
           </div>
           <OrderStatusBadge status={order.status} />
         </div>

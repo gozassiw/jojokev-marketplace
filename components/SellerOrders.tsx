@@ -43,6 +43,7 @@ export default function SellerOrders({ orders }: { orders: any[] }) {
             <div>
               <p className="font-medium">{o.order_number}</p>
               <p className="text-xs text-neutral-500">{new Date(o.created_at).toLocaleString('en-NG')}</p>
+              <p className="mt-1 text-xs font-bold text-emerald-700">Estimated delivery: 24–48 hours</p>
             </div>
             <OrderStatusBadge status={o.status} />
           </div>

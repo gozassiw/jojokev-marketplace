@@ -233,7 +233,7 @@ export async function broadcastDeliveryOffer(orderId: string) {
   const offers = eligible.map((r: any) => ({ order_id: orderId, rider_id: r.id, quote_kobo: Number(order.rider_quote_kobo || 0), expires_at: expiresAt, status: 'offered', responded_at: null }))
   const { error } = await db.from('delivery_offers').upsert(offers, { onConflict: 'order_id,rider_id' })
   if (error) return { error: error.message }
-  await db.from('notifications').insert(eligible.map((r: any) => ({ user_id: r.user_id, order_id: orderId, type: 'delivery_offer', title: 'New delivery offer', body: `Order ${order.order_number} is available for pickup in ${area?.name || city || 'the listed pickup area'}. Open Deliveries to accept it.`, metadata: { offer_expires_at: expiresAt, area: area?.name || city, quote_kobo: Number(order.rider_quote_kobo || 0) } })))
+  await db.from('notifications').insert(eligible.map((r: any) => ({ user_id: r.user_id, order_id: orderId, type: 'delivery_offer', title: 'New delivery offer', body: `A new delivery quote is available for pickup in ${area?.name || city || 'the listed pickup area'}. Open Deliveries to review the areas and accept or decline it.`, metadata: { offer_expires_at: expiresAt, area: area?.name || city, quote_kobo: Number(order.rider_quote_kobo || 0) } })))
   revalidatePath('/admin/dispatch'); revalidatePath('/rider'); revalidatePath('/notifications')
   return { success: `Quote sent to ${eligible.length} eligible rider${eligible.length === 1 ? '' : 's'}.` }
 }

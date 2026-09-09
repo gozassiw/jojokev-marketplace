@@ -22,7 +22,7 @@ export default async function OrdersPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-semibold mb-6">My orders</h1>
+          <div className="mb-6"><h1 className="text-2xl font-semibold">My orders</h1><p className="mt-1 text-sm font-semibold text-emerald-700">Estimated delivery for orders: 24–48 hours.</p></div>
 
       {!orders?.length ? (
         <div className="rounded-xl border bg-white p-10 text-center">

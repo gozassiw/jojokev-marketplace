@@ -158,6 +158,8 @@ export default function PaymentView({ orderId }: { orderId: string }) {
         </div>
       </div>
 
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">Estimated delivery time: 24–48 hours after payment and rider dispatch.</div>
+
       <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
         Transfer <strong>exactly {formatNaira(va.amountKobo)}</strong> to the account above from
         your bank app. A different amount will be reversed automatically.
