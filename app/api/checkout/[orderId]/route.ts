@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer, supabaseAdmin } from '@/lib/supabase/clients'
-import { createPaymentOrder, getOrderFee, payWithBankTransfer, extractVirtualAccount, normalizeNigeriaPhone } from '@/lib/transactpay'
+import { createPaymentOrder, getOrderFee, payWithBankTransfer, extractProviderTotalKobo, extractVirtualAccount, normalizeNigeriaPhone } from '@/lib/transactpay'
 
 /**
  * Issues a virtual account for an order.
@@ -63,9 +63,17 @@ export async function POST(
     const totalMajor = Number(feeData?.total ?? feeData?.totalAmount ?? feeData?.totalAmountCharged)
     if (Number.isFinite(totalMajor) && totalMajor > 0) paymentAmountKobo = Math.round(totalMajor * 100)
     else if (Number.isFinite(feeMajor) && feeMajor >= 0) paymentAmountKobo = order.total_kobo + Math.round(feeMajor * 100)
+    else throw new Error('Transactpay returned no fee total')
   } catch (feeError) {
-    console.error('[checkout] could not fetch TransactPay fee', feeError)
-    return NextResponse.json({ error: 'Transactpay could not calculate the exact transfer amount. Please try again.' }, { status: 502 })
+    // Some live TransactPay accounts do not expose the fee endpoint even though
+    // bank-transfer checkout works. Use the observed configured fee as a
+    // temporary fallback, then refine it from the pay response if available.
+    console.error('[checkout] fee lookup unavailable; using configured fallback', feeError)
+    const fallbackFeeKobo = Number(process.env.TRANSACTPAY_BANK_TRANSFER_FEE_KOBO ?? 2000)
+    if (!Number.isFinite(fallbackFeeKobo) || fallbackFeeKobo < 0) {
+      return NextResponse.json({ error: 'Transactpay fee configuration is unavailable. Please try again later.' }, { status: 502 })
+    }
+    paymentAmountKobo = order.total_kobo + Math.round(fallbackFeeKobo)
   }
 
   if (!Number.isFinite(paymentAmountKobo) || paymentAmountKobo < order.total_kobo) {
@@ -85,6 +93,8 @@ export async function POST(
     })
 
     const payRes = await payWithBankTransfer(reference)
+    const providerTotalKobo = extractProviderTotalKobo(payRes, order.total_kobo)
+    if (providerTotalKobo !== null && providerTotalKobo >= order.total_kobo) paymentAmountKobo = providerTotalKobo
     const va = extractVirtualAccount(payRes)
     if (!va) {
       const providerMessage = typeof payRes?.message === 'string' ? payRes.message : 'Transactpay did not return account details.'

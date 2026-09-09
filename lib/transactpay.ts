@@ -121,6 +121,34 @@ export async function getOrderFee(params: { amountKobo: number; currency?: strin
 }
 
 /** Request the bank-transfer payment option for a provider order. */
+/** Extract a fee-inclusive provider total when a response exposes one. */
+export function extractProviderTotalKobo(response: any, baseKobo: number): number | null {
+  const totalKeys = ['totalAmountCharged', 'totalAmount', 'total', 'payableAmount', 'amountToPay']
+  const customerFeeKeys = ['customerFee', 'customer_fee', 'fee']
+  const visited = new Set<any>()
+  let foundTotal: number | null = null
+  let foundFee: number | null = null
+
+  function walk(value: any, depth = 0) {
+    if (depth > 7 || value === null || value === undefined || typeof value !== 'object' || visited.has(value)) return
+    visited.add(value)
+    for (const key of totalKeys) {
+      const amount = Number(value[key])
+      if (Number.isFinite(amount) && amount > 0) foundTotal = amount
+    }
+    for (const key of customerFeeKeys) {
+      const fee = Number(value[key])
+      if (Number.isFinite(fee) && fee >= 0) foundFee = fee
+    }
+    for (const child of Object.values(value)) walk(child, depth + 1)
+  }
+
+  walk(response)
+  if (foundTotal !== null) return Math.round(foundTotal * 100)
+  if (foundFee !== null) return baseKobo + Math.round(foundFee * 100)
+  return null
+}
+
 export async function payWithBankTransfer(reference: string) {
   return tpFetch<any>('/payment/order/pay', {
     reference,
