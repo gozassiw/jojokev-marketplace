@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { supabaseServer } from '@/lib/supabase/clients'
 import { getCachedHomepageData } from '@/lib/storefront'
 import ProductCard from '@/components/ProductCard'
 import StorefrontHero from '@/components/StorefrontHero'
@@ -16,6 +18,19 @@ const fallbackCategories = [
 ]
 
 export default async function HomePage() {
+  try {
+    const supabase = await supabaseServer()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      if (profile?.role === 'admin') redirect('/admin')
+      if (profile?.role === 'seller') redirect('/seller')
+      if (profile?.role === 'rider') redirect('/rider')
+    }
+  } catch {
+    // A missing or unavailable session should continue to the public storefront.
+  }
+
   let categories: any[] = []
   let products: any[] = []
   let banners: any[] = []
