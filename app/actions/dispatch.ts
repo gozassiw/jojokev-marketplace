@@ -223,9 +223,12 @@ export async function broadcastDeliveryOffer(orderId: string) {
   const { data: riderRows } = await db.from('rider_profiles').select('id, user_id, service_city, status').eq('status', 'approved')
   const eligible = (riderRows || []).filter((r: any) => !city || String(r.service_city || '').trim().toLowerCase() === city)
   if (!eligible.length) return { error: `No approved riders are registered for ${city || 'this delivery area'}.` }
-  const expiresAt = new Date(Date.now() + 2 * 60 * 1000).toISOString()
-  const offers = eligible.map((r: any) => ({ order_id: orderId, rider_id: r.id, quote_kobo: Number(order.rider_quote_kobo || 0), expires_at: expiresAt, status: 'offered' }))
-  const { error } = await db.from('delivery_offers').upsert(offers, { onConflict: 'order_id,rider_id', ignoreDuplicates: true })
+  // Give riders a practical acceptance window. Re-broadcasting the same order
+  // must refresh an expired/declined offer instead of silently ignoring the
+  // unique (order_id, rider_id) row that already exists.
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+  const offers = eligible.map((r: any) => ({ order_id: orderId, rider_id: r.id, quote_kobo: Number(order.rider_quote_kobo || 0), expires_at: expiresAt, status: 'offered', responded_at: null }))
+  const { error } = await db.from('delivery_offers').upsert(offers, { onConflict: 'order_id,rider_id' })
   if (error) return { error: error.message }
   await db.from('notifications').insert(eligible.map((r: any) => ({ user_id: r.user_id, order_id: orderId, type: 'delivery_offer', title: 'New delivery offer', body: `Order ${order.order_number} is available in ${area?.name || city || 'your area'}. Open Deliveries to accept it.`, metadata: { offer_expires_at: expiresAt, area: area?.name || city, quote_kobo: Number(order.rider_quote_kobo || 0) } })))
   revalidatePath('/admin/dispatch'); revalidatePath('/rider'); revalidatePath('/notifications')
